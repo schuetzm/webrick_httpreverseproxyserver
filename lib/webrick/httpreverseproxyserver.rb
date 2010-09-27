@@ -105,7 +105,7 @@ module WEBrick
   protected
     # find the *first* matching pattern in the proxy map
     def first_matching_proxy_rule(request)
-      matching_rul = @config[:ProxyRules].detect { |rule|
+      matching_rule = @config[:ProxyRules].detect { |rule|
         re = Regexp.new(rule.pattern)
         m = re.match(request.path)
         not m.nil?
@@ -120,15 +120,16 @@ module WEBrick
       header = {}
       request.header.keys { |key| header[key] = request.header[key][0] }
       header['x-forwarded-for'] = request.peeraddr[2] # the name of the requesting host
-      # send the new request to the private server (hacked from WEBrick::HTTPProxyServer)
-      response = nil
+      # send the new request to the private server (hacked from
+      # WEBrick::HTTPProxyServer)
+      net_reponse = nil
       begin
         http = Net::HTTP.new(host, port)
         http.start {
           case request.request_method
-          when "GET"  then response = http.get(path, header)
-          when "POST" then response = http.post(path, request.body || "", header)
-          when "HEAD" then response = http.head(path, header)
+          when "GET"  then net_reponse = http.get(path, header)
+          when "POST" then net_reponse = http.post(path, request.body || "", header)
+          when "HEAD" then net_reponse = http.head(path, header)
           else
             raise HTTPStatus::MethodNotAllowed,
               "unsupported method `#{request.request_method}'."
@@ -141,9 +142,9 @@ module WEBrick
       response['connection'] = "close"
 
       # Convert Net::HTTP::HTTPResponse to WEBrick::HTTPResponse
-      response.status = response.code.to_i
-      response.each { |key, val| response[key] = val }
-      response.body = response.body
+      response.status = net_reponse.code.to_i
+      net_reponse.each { |key, val| response[key] = val }
+      response.body = net_reponse.body
 
       # Process contents
       if handler = @config[:ProxyContentHandler]
