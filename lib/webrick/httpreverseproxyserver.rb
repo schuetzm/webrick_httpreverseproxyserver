@@ -118,7 +118,7 @@ module WEBrick
       # convert WEBrick header (values wrapped in an array) into Net::HTTP
       # header (simple values)
       header = {}
-      request.header.keys { |key| header[key] = request.header[key][0] }
+      request.header.keys.each { |key| header[key] = request.header[key][0] }
       header['x-forwarded-for'] = request.peeraddr[2] # the name of the requesting host
       # send the new request to the private server (hacked from
       # WEBrick::HTTPProxyServer)
